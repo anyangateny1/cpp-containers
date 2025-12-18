@@ -10,16 +10,13 @@
 #include <nanobench.h>
 
 #include "my_vector.hpp"
+#include <concepts>
 
 
-// detect using SFINAE to detect if metthods are completed.
 namespace detect {
 
-template <typename T, typename E = int, typename = void> struct has_push_back : std::false_type {};
-
-template <typename T, typename E>
-struct has_push_back<T, E, std::void_t<decltype(std::declval<T>().push_back(std::declval<E>()))>>
-    : std::true_type {};
+template <class T, class E>
+concept has_push_back = requires(T t, E e) { t.push_back(e); };
 
 } // namespace detect
 
@@ -29,8 +26,8 @@ void benchmark_push_back() {
     constexpr size_t N = 1'000'000;
 
     // Check if MyVector has push_back
-    if constexpr (!detect::has_push_back<MyVector<int>, int>::value) {
-        std::cout << "[SKIP] MyVector missing push_back() - implement it first!\n";
+    if constexpr (!detect::has_push_back<MyVector<int>, int>) {
+        std::cout << "[SKIP] MyVector missing push_back()";
         return;
     }
 
