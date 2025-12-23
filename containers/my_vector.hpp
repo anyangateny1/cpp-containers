@@ -14,7 +14,10 @@ template <typename T> class MyVector {
         begin_ = alloc.allocate(capacity);
         end_ = begin_ + size;
         cap_ = begin_ + capacity;
-        std::copy(other.begin_, other.end_, begin_);
+
+        for (T* p = other.begin_; p != other.end_; ++p, ++end_) {
+            std::allocator_traits<decltype(alloc)>::construct(alloc, end_, p);
+        }
     }
 
     MyVector(MyVector&& other) {
@@ -143,24 +146,8 @@ template <typename T> class MyVector {
     }
 
     void allocate_more_storage() {
-        size_t old_capacity = cap_ - begin_;
-        size_t new_capacity = old_capacity * 2;
-
-        T* new_begin = alloc.allocate(new_capacity);
-        T* new_end = new_begin + (end_ - begin_);
-        T* new_cap = new_begin + new_capacity;
-
-        for (T* p = begin_; p != end_; ++p)
-            std::allocator_traits<decltype(alloc)>::construct(alloc, new_begin + (p - begin_),
-                                                              std::move(*p));
-
-        for (T* p = begin_; p != end_; ++p)
-            std::allocator_traits<decltype(alloc)>::destroy(alloc, p);
-        alloc.deallocate(begin_, old_capacity);
-
-        begin_ = new_begin;
-        end_ = new_end;
-        cap_ = new_cap;
+        size_t new_cap = capacity() ? capacity() * 2 : 1;
+        reserve(new_cap);
     }
 
     void destroy_storage() {
