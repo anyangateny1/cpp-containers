@@ -2,32 +2,34 @@
 #include <cstddef>
 #include <memory>
 
-constexpr size_t DEFAULT_SIZE = 10;
-
 template <typename T> class MyVector {
   public:
-    MyVector() : begin_(alloc.allocate(DEFAULT_SIZE)), end_(begin_), cap_(begin_ + DEFAULT_SIZE) {}
-    MyVector(const MyVector& other) {
-        size_t size = other.end_ - other.begin_;
-        size_t capacity = other.cap_ - other.begin_;
+    MyVector() : begin_(nullptr), end_(nullptr), cap_(nullptr) {}
+    MyVector(const MyVector& other) : begin_(nullptr), end_(nullptr), cap_(nullptr) {
+        size_t capacity = static_cast<size_t>(other.cap_ - other.begin_);
 
         begin_ = alloc.allocate(capacity);
-        end_ = begin_ + size;
+        end_ = begin_;
         cap_ = begin_ + capacity;
 
-        for (T* p = other.begin_; p != other.end_; ++p, ++end_) {
-            std::allocator_traits<decltype(alloc)>::construct(alloc, end_, p);
+        try {
+            for (T* p = other.begin_; p != other.end_; ++p, ++end_) {
+                std::allocator_traits<decltype(alloc)>::construct(alloc, end_, *p);
+            }
+        } catch (...) {
+            destroy_storage();
+            throw;
         }
     }
 
-    MyVector(MyVector&& other) {
+    MyVector(MyVector&& other) noexcept {
         begin_ = other.begin_;
         end_ = other.end_;
         cap_ = other.cap_;
         other.begin_ = other.end_ = other.cap_ = nullptr;
     }
 
-    MyVector& operator=(MyVector&& other) {
+    MyVector& operator=(MyVector&& other) noexcept {
         if (&other == this) {
             return *this;
         }
@@ -82,22 +84,11 @@ template <typename T> class MyVector {
             std::allocator_traits<decltype(alloc)>::destroy(alloc, end_);
         }
     }
-    bool empty() const { return size() == 0; }
+    bool empty() const noexcept { return size() == 0; }
 
-    size_t size() const {
-        if (begin_ == end_) {
-            return 0;
-        }
-        return (end_ - begin_);
-    }
+    size_t size() const noexcept { return begin_ ? static_cast<size_t>(end_ - begin_) : 0; }
 
-    size_t capacity() const noexcept {
-        if (!begin_) {
-            return 0;
-        }
-
-        return static_cast<size_t>(cap_ - begin_);
-    }
+    size_t capacity() const noexcept { return begin_ ? static_cast<size_t>(cap_ - begin_) : 0; }
 
     void reserve(size_t reserve_cap) {
         size_t old_cap = capacity();
