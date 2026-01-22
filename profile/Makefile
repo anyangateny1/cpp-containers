@@ -12,7 +12,7 @@ perf: $(TARGET)
 	perf report
 
 stat: $(TARGET)
-	perf stat -d ./$(TARGET)
+	perf stat -e cycles,instructions,cache-references,cache-misses,branches,branch-misses ./$(TARGET)
 
 cachegrind: $(TARGET)
 	valgrind --tool=cachegrind ./$(TARGET)
